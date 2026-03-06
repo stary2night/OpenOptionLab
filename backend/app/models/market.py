@@ -211,7 +211,7 @@ class UnusualFlow(Base):
     detected_at = Column(DateTime(timezone=True), server_default=func.now())
     
     # Additional metadata
-    metadata = Column(JSONB, nullable=True)
+    flow_metadata = Column(JSONB, nullable=True)
     
     __table_args__ = (
         Index('idx_flow_symbol_time', 'symbol', 'trade_time'),
