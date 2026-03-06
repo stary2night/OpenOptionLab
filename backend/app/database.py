@@ -110,3 +110,9 @@ async def cache_set(key: str, value: str, expire: int = 300):
         await redis_client.setex(key, expire, value)
 
 
+from app.models import (
+    User, UserFavorite, UserStrategy, UserNotification,
+    PasswordReset, EmailVerification, LoginHistory,
+    MarketSnapshot, OptionContract, MarketQuote, OptionQuote, UnusualFlow
+)
+
