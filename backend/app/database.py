@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sess
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.pool import NullPool
 import redis.asyncio as aioredis  # 使用 redis 替代 aioredis
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Optional
 
 from app.config import get_settings
 
@@ -92,3 +92,21 @@ async def close_db():
         await close_redis()
     except Exception as e:
         print(f"Redis close failed: {e}")
+
+
+# Cache helper functions
+async def cache_get(key: str) -> Optional[str]:
+    """Get value from cache"""
+    global redis_client
+    if redis_client:
+        return await redis_client.get(key)
+    return None
+
+
+async def cache_set(key: str, value: str, expire: int = 300):
+    """Set value in cache with expiration (seconds)"""
+    global redis_client
+    if redis_client:
+        await redis_client.setex(key, expire, value)
+
+
