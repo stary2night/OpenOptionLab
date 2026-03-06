@@ -1,0 +1,15 @@
+# 最简化 Dockerfile - 用于测试
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# 只安装 FastAPI 和 Uvicorn
+RUN pip install --no-cache-dir fastapi uvicorn
+
+# 复制最简化应用
+COPY app_simple.py .
+
+ENV PORT=8000
+EXPOSE $PORT
+
+CMD ["python", "app_simple.py"]

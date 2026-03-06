@@ -1,0 +1,136 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: timescale/timescaledb:latest-pg15
+    container_name: openoptions-postgres
+    environment:
+      POSTGRES_USER: openoptions
+      POSTGRES_PASSWORD: openoptions123
+      POSTGRES_DB: openoptions
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - openoptions-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U openoptions"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: openoptions-redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - openoptions-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # FastAPI Application
+  api:
+    build: .
+    container_name: openoptions-api
+    environment:
+      # Database
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: openoptions
+      POSTGRES_PASSWORD: openoptions123
+      POSTGRES_DB: openoptions
+      # TimescaleDB (same as PostgreSQL)
+      TIMESCALE_HOST: postgres
+      TIMESCALE_PORT: 5432
+      TIMESCALE_USER: openoptions
+      TIMESCALE_PASSWORD: openoptions123
+      TIMESCALE_DB: openoptions
+      # Redis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_DB: 0
+      # Celery
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+      # Security (change in production!)
+      SECRET_KEY: your-secret-key-change-in-production
+      # CORS
+      CORS_ORIGINS: '["http://localhost:5173", "http://localhost:3000"]'
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - openoptions-network
+    volumes:
+      - ./app:/app/app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  # Celery Worker (for background tasks)
+  celery-worker:
+    build: .
+    container_name: openoptions-celery-worker
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: openoptions
+      POSTGRES_PASSWORD: openoptions123
+      POSTGRES_DB: openoptions
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+      SECRET_KEY: your-secret-key-change-in-production
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - openoptions-network
+    command: celery -A app.celery_app worker --loglevel=info -Q market,maintenance,celery
+
+  # Celery Beat (for scheduled tasks)
+  celery-beat:
+    build: .
+    container_name: openoptions-celery-beat
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: openoptions
+      POSTGRES_PASSWORD: openoptions123
+      POSTGRES_DB: openoptions
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+      SECRET_KEY: your-secret-key-change-in-production
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - openoptions-network
+    command: celery -A app.celery_app beat --loglevel=info
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  openoptions-network:
+    driver: bridge

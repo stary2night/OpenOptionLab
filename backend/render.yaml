@@ -1,0 +1,34 @@
+# Render 部署配置文件
+services:
+  - type: web
+    name: openoptionlab-backend
+    runtime: docker
+    repo: https://github.com/stary2night/openoptionlab-backend
+    branch: main
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: false
+      - key: PORT
+        value: 8000
+    healthCheckPath: /
+    autoDeploy: true
+
+  - type: redis
+    name: openoptionlab-redis
+    ipAllowList: []
+
+  - type: pserv
+    name: openoptionlab-db
+    runtime: docker
+    repo: https://github.com/stary2night/openoptionlab-backend
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: POSTGRES_USER
+        value: postgres
+      - key: POSTGRES_PASSWORD
+        generateValue: true
+      - key: POSTGRES_DB
+        value: openoptions
