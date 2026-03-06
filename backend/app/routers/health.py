@@ -89,7 +89,7 @@ async def full_health_check(db: AsyncSession = Depends(get_db)):
     
     return results
 
-
+@router.get("/seed")
 @router.post("/seed")
 async def seed_database(db: AsyncSession = Depends(get_db)):
     """
