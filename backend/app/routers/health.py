@@ -3,9 +3,11 @@ Health Check Router
 """
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import text
+from sqlalchemy import text, select, func
+from decimal import Decimal
 
 from app.database import get_db, get_redis
+from app.models.market import MarketSnapshot
 
 router = APIRouter()
 
